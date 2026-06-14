@@ -1,20 +1,10 @@
-# Virtual environment
+# Virtual environment (platform-specific, must reinstall on each machine)
 venv/
 
 # Python cache
 __pycache__/
 *.pyc
 *.pyo
-
-# Trained models (too large for GitHub — retrain with `python main.py train`)
-models/*.keras
-models/*.h5
-
-# Tokenizer (regenerated during training)
-models/tokenizer.json
-
-# Dataset (download from Kaggle — see README)
-data/*.csv
 
 # macOS
 .DS_Store
