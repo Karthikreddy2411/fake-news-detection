@@ -132,3 +132,24 @@ if st.button("🔍 Analyse", use_container_width=True):
               <p class="confidence">Confidence: {confidence:.1%}</p>
             </div>
             """, unsafe_allow_html=True)
+
+        # ── GNews Cross-Reference ─────────────────────────────────────────
+        st.markdown("---")
+        st.subheader("🌐 Online Verification (Google News)")
+
+        with st.spinner("Searching Google News …"):
+            from src.news_checker import NewsChecker
+            checker = NewsChecker(max_results=10)
+            verification = checker.check(article_text)
+
+        st.write(f"**Verdict:** {verification.verdict_emoji} {verification.verdict}")
+        st.write(f"**Articles found:** {verification.total_found} ({verification.reputable_count} from reputable sources)")
+
+        if verification.articles:
+            for art in verification.articles[:5]:
+                tag = " ✅ Reputable" if art.is_reputable else ""
+                st.write(f"- [{art.title}]({art.url}) — *{art.source}*{tag}")
+        elif verification.error:
+            st.warning(f"Could not search: {verification.error}")
+        else:
+            st.info("No matching articles found online. This story may not be covered by any major outlet.")
