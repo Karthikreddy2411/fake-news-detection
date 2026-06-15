@@ -12,3 +12,14 @@ __pycache__/
 # IDE
 .vscode/
 .idea/
+
+# Documentation & generated files (local only)
+*.pptx
+*.docx
+screenshots/
+
+# Generation helper scripts (not part of core project)
+generate_ppt.py
+generate_ppt_ngit.py
+generate_report.py
+generate_figures.py
