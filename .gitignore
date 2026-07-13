@@ -24,10 +24,6 @@ generate_ppt_ngit.py
 generate_report.py
 generate_figures.py
 
-# Trained model files — too large for GitHub (75MB+ each).
-# Reproduce with: python main.py train
-models/
-
 # Scratch & local-only directories
 scratch/
 documentation/

@@ -18,84 +18,49 @@ Implementation of the complete pipeline from the research paper:
 
 ---
 
-## ⚠️ Model Files Are Not in This Repo
+## ✅ Plug-and-Play — No Training Needed
 
-The trained model files (`lstm_model.keras`, `cnn_model.keras`, `tokenizer.json`)
-are **not committed to git** because they are 75–80 MB each — too large for GitHub.
+The dataset (`True.csv`, `Fake.csv`) and trained models (`lstm_model.keras`,
+`cnn_model.keras`, `tokenizer.json`) are **already included in this repo**.
 
-**You must train the models yourself after cloning.** This takes ~10 minutes on CPU
-(see Step 3 below). Everything is automated with a single command.
+**Just clone, install dependencies, and run the app — no Kaggle download, no training required.**
 
 ---
 
-## Quick Start (for friends cloning this repo)
-
-### Step 1 — Clone & set up the environment
+## Quick Start
 
 > **Requires Python 3.12** — TensorFlow does not support Python 3.13+ yet.
 
 ```bash
+# 1. Clone the repo
 git clone https://github.com/Karthikreddy2411/fake-news-detection.git
 cd fake-news-detection
 
-# Create virtual environment with Python 3.12
+# 2. Create and activate virtual environment
 python3.12 -m venv venv
+source venv/bin/activate        # macOS / Linux
+# venv\Scripts\activate         # Windows
 
-# Activate it
-source venv/bin/activate          # macOS / Linux
-# venv\Scripts\activate           # Windows
-
-# Install all dependencies
+# 3. Install dependencies
 pip install -r requirements.txt
+
+# 4. Launch the app — models are already trained!
+streamlit run app.py
 ```
+
+Opens at **http://localhost:8501** — paste any article and get a prediction instantly.
 
 ---
 
-### Step 2 — Download the ISOT Dataset
+## Want to Retrain from Scratch?
 
-1. Go to: https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset
-2. Click **Download** (free Kaggle account required)
-3. Unzip and place **`True.csv`** and **`Fake.csv`** inside the `data/` folder:
-
-```
-fake-news-detection/
-└── data/
-    ├── True.csv    ← real news articles (Reuters)
-    └── Fake.csv    ← fake news (PolitiFact / Wikipedia)
-```
-
-**Or use the Kaggle CLI:**
-```bash
-pip install kaggle
-# Put your API token in ~/.kaggle/kaggle.json first
-kaggle datasets download -d clmentbisaillon/fake-and-real-news-dataset -p data/ --unzip
-```
-
----
-
-### Step 3 — Train the Models
+If you want to retrain the models (e.g., after modifying the preprocessing):
 
 ```bash
-# Train both LSTM and CNN (recommended)
-python main.py train
-
-# Or train individually (CNN is much faster ~3 min)
-python main.py train --model cnn
-python main.py train --model lstm
+python main.py train            # both LSTM + CNN
+python main.py train --model cnn   # CNN only (~3–4 min on M-series)
+python main.py train --model lstm  # LSTM only (~8–10 min on M-series)
 ```
-
-This will automatically:
-- Load and clean 44,842 articles with sensationalism-aware preprocessing
-- Build tokenizer (vocab=30,000 with special fake-news tokens)
-- Pad/truncate sequences to 300 tokens
-- Train LSTM and CNN with early stopping (up to 10 epochs)
-- Save models to `models/` (created automatically)
-
-**Expected time:**
-| Model | CPU (Apple M-series) | CPU (Intel) |
-|-------|---------------------|-------------|
-| CNN   | ~3–4 min | ~8–10 min |
-| LSTM  | ~8–10 min | ~25–40 min |
 
 ---
 
