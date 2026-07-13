@@ -38,7 +38,9 @@ def build_lstm_model() -> tf.keras.Model:
     """
     model = Sequential(name="LSTM_FakeNews", layers=[
         Embedding(
-            input_dim=C.VOCAB_SIZE,
+            # +1: Keras Tokenizer is 1-indexed (0=pad, 1=OOV, 2..VOCAB_SIZE=words)
+            # Without +1, index VOCAB_SIZE is out of bounds for the embedding table.
+            input_dim=C.VOCAB_SIZE + 1,
             output_dim=C.EMBED_DIM,
             input_length=C.MAX_LEN,
             name="embedding",
@@ -46,15 +48,15 @@ def build_lstm_model() -> tf.keras.Model:
         LSTM(
             units=C.LSTM_UNITS,
             dropout=C.LSTM_DROPOUT,
-            # NOTE: recurrent_dropout removed — it disables the fast Metal/cuDNN
-            # kernel on Apple Silicon, causing 10-20x slower training on CPU.
-            # Regularisation is preserved via the Dropout layer below.
-            # unroll=True prevents TF threading deadlock on macOS.
-            unroll=True,
+            # unroll=True REMOVED — it forces a CPU loop and disables the fast
+            # Metal / cuDNN kernel on Apple Silicon (10-20x slower).
+            # Without it, TF automatically dispatches to the Metal GPU kernel.
             name="lstm",
         ),
         Dropout(C.LSTM_DROPOUT, name="dropout"),
-        Dense(1, activation="sigmoid", name="output"),
+        # dtype='float32' required — mixed precision keeps compute in float16
+        # but output must be float32 for numerical stability with sigmoid loss.
+        Dense(1, activation="sigmoid", dtype="float32", name="output"),
     ])
     model.compile(
         optimizer="adam",
@@ -71,7 +73,8 @@ def build_cnn_model() -> tf.keras.Model:
     """
     model = Sequential(name="CNN_FakeNews", layers=[
         Embedding(
-            input_dim=C.VOCAB_SIZE,
+            # +1 for same reason as LSTM: tokenizer indices go up to VOCAB_SIZE
+            input_dim=C.VOCAB_SIZE + 1,
             output_dim=C.EMBED_DIM,
             input_length=C.MAX_LEN,
             name="embedding",
@@ -84,7 +87,8 @@ def build_cnn_model() -> tf.keras.Model:
         ),
         GlobalAveragePooling1D(name="global_avg_pool"),
         Dropout(C.CNN_DROPOUT, name="dropout"),
-        Dense(1, activation="sigmoid", name="output"),
+        # dtype='float32' required for mixed precision stability
+        Dense(1, activation="sigmoid", dtype="float32", name="output"),
     ])
     model.compile(
         optimizer="adam",

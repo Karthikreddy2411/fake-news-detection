@@ -31,12 +31,50 @@ import config as C
 # ─────────────────────────────────────────────────────────────────────────────
 
 def clean_text(text: str) -> str:
-    """Light cleaning: remove URLs, HTML tags, extra whitespace."""
+    """
+    Cleaning that PRESERVES fake-news signals as special tokens:
+      - ALL-CAPS words          → <ALLCAPS>
+      - URLs / hyperlinks       → <URL>
+      - Repeated exclamation    → <EXCLAM>
+      - HTML tags               → stripped (no semantic value)
+      - Hedge phrases           → <ALLEGEDLY>, <ANONYMOUS_SOURCE>
+
+    These tokens give the model learnable features that separate
+    sensationalist fake content from factual Reuters-style reporting.
+    """
     if not isinstance(text, str):
         return ""
-    text = re.sub(r"http\S+|www\S+", " ", text)      # URLs
-    text = re.sub(r"<[^>]+>", " ", text)              # HTML tags
-    text = re.sub(r"[^a-zA-Z0-9\s'.,!?]", " ", text) # special chars
+
+    # ── Replace URLs before lowercasing (URL schemes are mixed-case) ──────────
+    text = re.sub(r"http\S+|www\S+", " <URL> ", text)
+
+    # ── Replace hedge / anonymous-source phrases ──────────────────────────────
+    hedge_patterns = [
+        (r"\ballegedly\b",                   "<ALLEGEDLY>"),
+        (r"\bsources? claim\b",              "<ALLEGEDLY>"),
+        (r"\banonymous(ly)?\b",              "<ANONYMOUS_SOURCE>"),
+        (r"\bshare before (it is )?(?:deleted|censored|removed)\b", "<SHARE_BEFORE_DELETED>"),
+        (r"\bbefore (it is )?(?:censored|deleted|removed)\b",       "<SHARE_BEFORE_DELETED>"),
+        (r"\bno official\b",                 "<NO_OFFICIAL_CONFIRM>"),
+        (r"\bnot confirmed\b",               "<NO_OFFICIAL_CONFIRM>"),
+    ]
+    for pattern, token in hedge_patterns:
+        text = re.sub(pattern, f" {token} ", text, flags=re.IGNORECASE)
+
+    # ── Mark ALL-CAPS words (≥2 chars) before lowercasing ─────────────────────
+    text = re.sub(r"\b[A-Z]{2,}\b", lambda m: f" <ALLCAPS> {m.group(0)} ", text)
+
+    # ── Mark repeated exclamation / question marks ─────────────────────────────
+    text = re.sub(r"[!]{2,}",  " <EXCLAM> ", text)
+    text = re.sub(r"[?!][?!]+", " <EXCLAM> ", text)
+
+    # ── Strip HTML tags ────────────────────────────────────────────────────────
+    text = re.sub(r"<[^>]+>", " ", text)
+
+    # ── Remove remaining non-alphanumeric chars (keep apostrophes / periods) ──
+    text = re.sub(r"[^a-zA-Z0-9\s'.,!?<>_]", " ", text)
+
+    # ── Collapse whitespace and lowercase ────────────────────────────────────
     text = re.sub(r"\s+", " ", text).strip()
     return text.lower()
 

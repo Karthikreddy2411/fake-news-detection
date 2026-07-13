@@ -14,8 +14,8 @@ LSTM_MODEL_PATH = "models/lstm_model.keras"
 CNN_MODEL_PATH  = "models/cnn_model.keras"
 
 # ── Text preprocessing (Section VI-B) ─────────────────────────────────────────
-VOCAB_SIZE  = 20_000   # top-N most frequent tokens
-MAX_LEN     = 150      # pad / truncate (covers headline + lead; unrolled LSTM needs shorter seqs)
+VOCAB_SIZE  = 30_000   # increased: covers new special tokens + richer vocab
+MAX_LEN     = 300      # increased: was 150, short articles were mostly padding
 OOV_TOKEN   = "<OOV>"
 PADDING     = "post"
 TRUNCATING  = "post"
@@ -34,8 +34,8 @@ CNN_KERNEL_SIZE = 5
 CNN_DROPOUT     = 0.5
 
 # ── Training (Section VI-D) ────────────────────────────────────────────────────
-BATCH_SIZE    = 512    # large batch → better GPU utilisation on Metal
-EPOCHS        = 3
+BATCH_SIZE    = 1024   # increased for M4 Metal GPU — more work per step = faster
+EPOCHS        = 10     # increased from 3; EarlyStopping (patience=2) prevents overfitting
 RANDOM_STATE  = 42
 
 # ── Train / val / test split (Section VI-B) ────────────────────────────────────
