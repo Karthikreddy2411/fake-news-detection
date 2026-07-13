@@ -7,79 +7,99 @@ Implementation of the complete pipeline from the research paper:
 
 ---
 
-## What This Project Does
+## Results
 
-| Component | Details |
-|-----------|---------|
-| **Models** | LSTM (128 units) and CNN (128 filters, kernel=5) |
-| **XAI methods** | SHAP, LIME, Integrated Gradients |
-| **Metrics** | Δcomp, Δsuff, AOPC, Flip@k |
-| **Dataset** | ISOT Fake News (44,898 articles) |
-| **Interface** | Streamlit web app + CLI |
+| Model | Accuracy | Precision | Recall | F1 |
+|-------|----------|-----------|--------|----|
+| **LSTM** | 95.6% | 0.96 | 0.96 | 0.96 |
+| **CNN**  | 99.5% | 0.99 | 0.99 | 0.99 |
+
+> Models trained on the ISOT Fake News dataset (44,842 articles).
 
 ---
 
-## Setup
+## ⚠️ Model Files Are Not in This Repo
 
-### 1. Install dependencies
+The trained model files (`lstm_model.keras`, `cnn_model.keras`, `tokenizer.json`)
+are **not committed to git** because they are 75–80 MB each — too large for GitHub.
+
+**You must train the models yourself after cloning.** This takes ~10 minutes on CPU
+(see Step 3 below). Everything is automated with a single command.
+
+---
+
+## Quick Start (for friends cloning this repo)
+
+### Step 1 — Clone & set up the environment
 
 > **Requires Python 3.12** — TensorFlow does not support Python 3.13+ yet.
-> A `venv/` folder has already been created for you with Python 3.12.
 
-**Activate the virtual environment first:**
 ```bash
-cd "mini project"
-source venv/bin/activate        # macOS / Linux
-# or on Windows: venv\Scripts\activate
-```
+git clone https://github.com/Karthikreddy2411/fake-news-detection.git
+cd fake-news-detection
 
-**Then install (already done if you see the `venv/` folder is populated):**
-```bash
+# Create virtual environment with Python 3.12
+python3.12 -m venv venv
+
+# Activate it
+source venv/bin/activate          # macOS / Linux
+# venv\Scripts\activate           # Windows
+
+# Install all dependencies
 pip install -r requirements.txt
 ```
 
-### 2. Download the ISOT Dataset
+---
+
+### Step 2 — Download the ISOT Dataset
 
 1. Go to: https://www.kaggle.com/datasets/clmentbisaillon/fake-and-real-news-dataset
-2. Click **Download** (requires free Kaggle account)
-3. Unzip and copy **`True.csv`** and **`Fake.csv`** into the `data/` folder:
+2. Click **Download** (free Kaggle account required)
+3. Unzip and place **`True.csv`** and **`Fake.csv`** inside the `data/` folder:
 
 ```
-mini project/
+fake-news-detection/
 └── data/
-    ├── True.csv    ← real news articles from Reuters
-    └── Fake.csv    ← fake news flagged by PolitiFact / Wikipedia
+    ├── True.csv    ← real news articles (Reuters)
+    └── Fake.csv    ← fake news (PolitiFact / Wikipedia)
 ```
 
-**Alternative (Kaggle CLI):**
+**Or use the Kaggle CLI:**
 ```bash
 pip install kaggle
-# Set up ~/.kaggle/kaggle.json with your API token
+# Put your API token in ~/.kaggle/kaggle.json first
 kaggle datasets download -d clmentbisaillon/fake-and-real-news-dataset -p data/ --unzip
 ```
 
 ---
 
-## Usage
-
-### Step 1 — Train Models
+### Step 3 — Train the Models
 
 ```bash
+# Train both LSTM and CNN (recommended)
 python main.py train
+
+# Or train individually (CNN is much faster ~3 min)
+python main.py train --model cnn
+python main.py train --model lstm
 ```
 
-This will:
-- Load and clean the dataset (~44k articles)
-- Build tokenizer (vocab=20,000, OOV token)
-- Pad/truncate all sequences to 750 tokens
-- Train **LSTM** and **CNN** with early stopping
-- Save models to `models/lstm_model.keras` and `models/cnn_model.keras`
+This will automatically:
+- Load and clean 44,842 articles with sensationalism-aware preprocessing
+- Build tokenizer (vocab=30,000 with special fake-news tokens)
+- Pad/truncate sequences to 300 tokens
+- Train LSTM and CNN with early stopping (up to 10 epochs)
+- Save models to `models/` (created automatically)
 
-Expected time: ~5–20 min (GPU) / 30–60 min (CPU)
+**Expected time:**
+| Model | CPU (Apple M-series) | CPU (Intel) |
+|-------|---------------------|-------------|
+| CNN   | ~3–4 min | ~8–10 min |
+| LSTM  | ~8–10 min | ~25–40 min |
 
 ---
 
-### Step 2 — Launch the Web App
+### Step 4 — Launch the Web App
 
 ```bash
 streamlit run app.py
@@ -88,105 +108,115 @@ streamlit run app.py
 Opens at **http://localhost:8501**
 
 **Features:**
-- Paste any news article
-- Choose LSTM or CNN
-- Choose SHAP / LIME / Integrated Gradients
-- See **prediction** + **confidence**
-- See **token heatmap** (red=Real, blue=Fake)
+- Paste any news article → get REAL / FAKE prediction with confidence %
+- Choose LSTM or CNN model
+- Choose SHAP / LIME / Integrated Gradients explainability method
+- See **token heatmap** (which words drove the decision)
 - See **top influential tokens** table
-- See **Δcomp, Δsuff, AOPC, Flip@k** for this instance
+- See **Δcomp, Δsuff, AOPC, Flip@k** metrics for this instance
 
 ---
 
-### Step 3 (Optional) — Compute Full Metrics (Tables II & III)
+### Optional — CLI Demo
 
 ```bash
+# Run a quick demo with built-in fake news sample
+python main.py demo
+
+# Test your own article text
+python main.py demo --text "Your article text here" --model lstm
+
+# Compute full XAI metrics (Tables II & III) — takes 1-3 hours
 python main.py evaluate
 ```
 
-Evaluates all 3 XAI methods × 2 models over 60 test articles.
-Prints the same metrics as Tables II and III in the paper.
-
-> ⚠️ This can take **1–3 hours** (SHAP and LIME are slow on CPU).
-
 ---
 
-### Quick Demo (terminal)
+## What Makes This Preprocessing Different
 
-```bash
-# Demo with built-in fake news sample (CNN + LIME)
-python main.py demo
+Previous versions of this project stripped ALL-CAPS, URLs, and exclamation marks
+from article text — accidentally erasing the strongest fake-news signals.
 
-# Demo with custom text
-python main.py demo --text "Your article text here" --model lstm
-```
+The current `clean_text()` in `src/preprocess.py` converts them to **learnable tokens**:
+
+| Input | Token produced |
+|-------|---------------|
+| `BREAKING`, `SECRETLY`, `MASSIVE` | `<allcaps>` |
+| `http://fakesite.com` | `<url>` |
+| `!!`, `!?!` | `<exclam>` |
+| `"allegedly"`, `"sources claim"` | `<allegedly>` |
+| `"anonymous"` | `<anonymous_source>` |
+| `"No official confirmed"` | `<no_official_confirm>` |
+| `"share before deleted/censored"` | `<share_before_deleted>` |
+
+This lets the model learn that sensationalist language patterns are predictive of fake news.
 
 ---
 
 ## Project Structure
 
 ```
-mini project/
-├── data/                       ← Place True.csv + Fake.csv here
-│   └── .gitkeep
-├── models/                     ← Auto-created, stores trained models
+fake-news-detection/
+├── data/                       ← Place True.csv + Fake.csv here (not in git)
+├── models/                     ← Auto-created when you run train (not in git)
+│   ├── lstm_model.keras
+│   ├── cnn_model.keras
+│   └── tokenizer.json
 ├── src/
-│   ├── __init__.py
 │   ├── preprocess.py           ← Data loading, cleaning, tokenization
 │   ├── models.py               ← LSTM + CNN architectures
 │   ├── train.py                ← Training + evaluation
 │   ├── metrics.py              ← Δcomp, Δsuff, AOPC, Flip@k
 │   └── xai/
-│       ├── __init__.py
-│       ├── shap_explainer.py   ← SHAP (TextMasker, 100 samples)
-│       ├── lime_explainer.py   ← LIME (1000 perturbations, top-20)
-│       └── ig_explainer.py     ← Integrated Gradients (50 steps)
+│       ├── shap_explainer.py
+│       ├── lime_explainer.py
+│       └── ig_explainer.py
 ├── app.py                      ← Streamlit web app
 ├── main.py                     ← CLI: train / evaluate / demo
-├── config.py                   ← All hyperparameters from paper
-├── requirements.txt
-└── README.md
+├── config.py                   ← All hyperparameters
+└── requirements.txt
 ```
 
 ---
 
-## Model Architectures (Section VI-C)
+## Model Architectures
 
 ### LSTM
 ```
-Embedding(20000, 128, input_length=750)
-→ LSTM(128, dropout=0.2, recurrent_dropout=0.2)
-→ Dense(1, sigmoid)
+Embedding(30001, 128, input_length=300)
+→ LSTM(128, dropout=0.2)
+→ Dropout(0.2)
+→ Dense(1, sigmoid, dtype=float32)
 ```
 
 ### CNN
 ```
-Embedding(20000, 128, input_length=750)
-→ Conv1D(128, kernel_size=5, activation='relu')
+Embedding(30001, 128, input_length=300)
+→ Conv1D(128, kernel_size=5, relu)
 → GlobalAveragePooling1D()
 → Dropout(0.5)
-→ Dense(1, sigmoid)
+→ Dense(1, sigmoid, dtype=float32)
 ```
 
-Both: `Adam` optimizer · `binary_crossentropy` loss · `batch_size=64`
+Both: `Adam` · `binary_crossentropy` · `batch_size=1024` · `epochs=10 (early stopping)`
 
 ---
 
-## Expected Results (paper Tables II & III)
+## XAI Metrics (paper Tables II & III)
 
 ### LSTM
-| Method | Δcomp ↑ | Δsuff ↓ | AOPC ↑ | Flip@k ↓ | Time |
-|--------|---------|---------|--------|----------|------|
-| **SHAP** 🏆 | **0.0862** | **0.4907** | **0.4725** | **9.47** | 4.69s |
-| LIME | 0.0067 | 0.5082 | 0.4400 | 9.65 | 4.45s |
-| IG | 0.0137 | 0.5030 | 0.4411 | 9.85 | 24.34s |
+| Method | Δcomp ↑ | Δsuff ↓ | AOPC ↑ | Flip@k ↓ |
+|--------|---------|---------|--------|----------|
+| **SHAP** 🏆 | **0.0862** | **0.4907** | **0.4725** | **9.47** |
+| LIME | 0.0067 | 0.5082 | 0.4400 | 9.65 |
+| IG | 0.0137 | 0.5030 | 0.4411 | 9.85 |
 
 ### CNN
-| Method | Δcomp ↑ | Δsuff ↓ | AOPC ↑ | Flip@k ↓ | Time |
-|--------|---------|---------|--------|----------|------|
-| **IG** 🏆 | **0.2866** | **0.2008** | **0.6498** | **4.78** | **0.16s** |
-| LIME | 0.1734 | 0.2256 | 0.6160 | 4.95 | 0.74s |
-| SHAP | 0.1274 | 0.3993 | 0.5284 | 4.93 | 1.25s |
+| Method | Δcomp ↑ | Δsuff ↓ | AOPC ↑ | Flip@k ↓ |
+|--------|---------|---------|--------|----------|
+| **IG** 🏆 | **0.2866** | **0.2008** | **0.6498** | **4.78** |
+| LIME | 0.1734 | 0.2256 | 0.6160 | 4.95 |
+| SHAP | 0.1274 | 0.3993 | 0.5284 | 4.93 |
 
 ---
 
