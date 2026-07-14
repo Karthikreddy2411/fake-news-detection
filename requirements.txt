@@ -1,5 +1,8 @@
 # ── Core ML (requires Python 3.9-3.12) ──────────────────────────────────────
-tensorflow>=2.16.0
+# IMPORTANT: pin exact versions — models were saved with TF 2.21.0 / Keras 3.14.1
+# Using a different version causes "quantization_config" deserialization errors.
+tensorflow==2.21.0
+keras==3.14.1
 numpy>=1.23.0
 pandas>=1.5.0
 scikit-learn>=1.2.0
